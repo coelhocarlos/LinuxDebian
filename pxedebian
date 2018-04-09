@@ -51,13 +51,21 @@ After editing the interfaces file you need to restart the device.!!!!!!!!!!!!!!!
 !!!!!!!!!!We can now move on to the PXE layout. The root directory I use is /tftpboot so i'll use it in the tutorial.!!!!!!!!
 
 !!!!!!!!!!!!!!!!!!!!!!!create a new directory for tftp !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-sudo mkdir -p /tftpboot
-sudo mkdir -p /tftpboot/pxelinux.cfg 
+
+sudo mkdir -p /srv/tftpboot
+sudo mkdir -p /srv/ftpboot/images
+sudo mkdir -p /srv/ftpboot/images/win7
+sudo mkdir -p /srv/tftpboot/pxelinux.cfg 
+
 !!!!!!!!!!!!!!!!!!!!!!Copy a couple of files from syslinux to the tftpboot directory!!!!!!!!
-sudo cp /usr/lib/syslinux/menu.c32 /tftpboot
-sudo cp /usr/lib/syslinux/pxelinux.0 /tftpboot
+
+sudo cp /usr/lib/syslinux/menu.c32 /srv/tftpboot
+sudo cp /usr/lib/syslinux/pxelinux.0 /srv/tftpboot
+
 !!!!!!!!!!!!!!!!!!!!!!After that we can create the default file for PXE!!!!!!!!!!!!!!!!!!!!!!
+
 sudo nano /tftpboot/pxelinux.cfg/default
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!edit default!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 DEFAULT menu.c32
 PROMPT 0
@@ -69,12 +77,13 @@ kernel ipxe.krn
 initrd conf.ipxe
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Just save and exit. Now download iPXE's boot CD and mount it. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 wget http://boot.ipxe.org/ipxe.iso  
 sudo mount -o loop ipxe.iso /media/pxe 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!cd in to /media and copy boot.cat and ipxe.krn to the root of the tftpboot directory. !!!!!!!!!!!!!
-
-sudo cp boot.cat ipxe.krn /tftpboot
+cd /media/pxe/
+sudo cp boot.cat ipxe.krn /srv/tftpboot
 unmount the ipxe.iso 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!Now we need a config file for iPXE to boot a AOE.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -115,7 +124,8 @@ I put mine in the /tftpboot/images/win7 directory. --
 
 sudo mkdir -p /tftpboot/images/win7 -- 
 
-sudo dd if=/media/hd2000/Manutencao/win7.iso of=/srv/tftpboot/images/win7/win7.img bs=4M
+sudo dd if=/media/hd2000/Manutencao/windows/isos/win7.iso of=/srv/tftpboot/images/win7/win7.img bs=4M
+sudo dd if=/media/hd2000/Manutencao/Windows/isos/Windows_Server_2008_R2/GRMSXVOL_DVD.iso of=/srv/tftpboot/images/win2008R2/win2008r2.img bs=4M
 
 It will take about five or ten minutes to copy. When finished we can start vblade. -- 
 sudo vbladed 0 1 ens130 /tftpboot/images/win7/win7.img  
