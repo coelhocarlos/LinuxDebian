@@ -1,0 +1,126 @@
+Linux Debian with PXE and AOE server to install windows 7/8
+
+Software needed
+
+Base system of Debian
+DNSMasq - via APT
+iPXE boot CD
+Syslinux - via APT
+vblade - via APT
+Windows 7 or 8 in jump drive form
+
+!!!!!!!!!!!!!!!!!!Install DNSMasq and Syslinux with apt!!!!!!!!!!!!!!!!!!!!!!
+
+sudo apt-get install dnsmasq 
+
+!!!!!!!!!!!!!!!!!!Configure DNSMasq with nano or vi to your liking !!!!!!!!!!
+
+sudo nano /etc/dnsmasq.conf 
+
+!!!!!!!!!!!!!!!!You can use my config if yo wish.!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+interface=eth1
+listen-address=127.0.0.1
+domain=
+dhcp-range=192.168.0.50,192.168.0.150,12h
+dhcp-boot=pxelinux.0
+enable-tftp
+tftp-root=/tftpboot/
+log-queries
+log-dhcp
+
+!!!!!!!!!!!!!!!!!We also need to make the NIC to run a static address.!!!!!!!! 
+As you can see I am using eth1 but you might be using eth0 so keep in mind yours might be different.
+
+!!!!!!!!!!!!!!!!!To give your NIC a static address edit!!!!!!!!!!!!!!!!!!!!!!!
+sudo nano /etc/network/interfaces
+!!!!!!!!!!!!!!!!!-- here's mine for a example.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ 
+allow-hotplug eth1
+iface eth1 inet static
+        address 192.168.0.1
+        netmask 255.255.255.0
+        network 192.168.0.0
+        broadcast 192.168.0.255
+ 
+!!!!!!!!!!!!!!!!!!Just make sure you use the correct IP subnet that matches DNSMasq.
+After editing the interfaces file you need to restart the device.!!!!!!!!!!!!!!!!!!!!!!!!!
+
+/etc/init.d/networking restart
+ 
+!!!!!!!!!!We can now move on to the PXE layout. The root directory I use is /tftpboot so i'll use it in the tutorial.!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!create a new directory for tftp !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+sudo mkdir -p /tftpboot
+sudo mkdir -p /tftpboot/pxelinux.cfg 
+!!!!!!!!!!!!!!!!!!!!!!Copy a couple of files from syslinux to the tftpboot directory!!!!!!!!
+sudo cp /usr/lib/syslinux/menu.c32 /tftpboot
+sudo cp /usr/lib/syslinux/pxelinux.0 /tftpboot
+!!!!!!!!!!!!!!!!!!!!!!After that we can create the default file for PXE!!!!!!!!!!!!!!!!!!!!!!
+sudo nano /tftpboot/pxelinux.cfg/default
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!edit default!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+DEFAULT menu.c32
+PROMPT 0
+MENU TITLE PXE Boot
+TIMEOUT 100
+LABEL Install Win7
+MENU LABEL Install Win7
+kernel ipxe.krn
+initrd conf.ipxe
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Just save and exit. Now download iPXE's boot CD and mount it. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+wget http://boot.ipxe.org/ipxe.iso  
+sudo mount -o loop ipxe.iso /media/pxe 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!cd in to /media and copy boot.cat and ipxe.krn to the root of the tftpboot directory. !!!!!!!!!!!!!
+
+sudo cp boot.cat ipxe.krn /tftpboot
+unmount the ipxe.iso 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!Now we need a config file for iPXE to boot a AOE.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+sudo nano /tftpboot/conf.ipxe 
+
+It should look like this
+
+#!ipxe
+dhcp net0
+set keep-san 1
+sanboot aoe:e0.1
+
+In all tha was the hard part. The easy part is setting up AOE.
+Debian's kernel has the module ready to go but has to be enabled. 
+
+modprobe aoe 
+
+now we need to add it to the modules file so it is loaded when the system boots. -- 
+sudo nano /etc/modules 
+
+-- Should look like this
+
+# /etc/modules: kernel modules to load at boot time.
+#
+# This file contains the names of kernel modules that should be loaded
+# at boot time, one per line. Lines beginning with "#" are ignored.
+# Parameters can be specified after the module name.
+
+aoe
+loop
+
+Now install vblade -- 
+sudo apt-get install vblade
+
+Copy the Win7 or 8 USB jump drive using disk dump. 
+
+I put mine in the /tftpboot/images/win7 directory. --
+
+sudo mkdir -p /tftpboot/images/win7 -- 
+
+sudo dd if=/media/hd2000/Manutencao/win7.iso of=/srv/tftpboot/images/win7/win7.img bs=4M
+
+It will take about five or ten minutes to copy. When finished we can start vblade. -- 
+sudo vbladed 0 1 ens130 /tftpboot/images/win7/win7.img  
+
+You can create a script or even issue it in the rc.local file to start everytime the system boots. 
+All what is left is to restart DNSMasq and test it out with Virutal Box or a real system.
+
+sudo /etc/init.d/dnsmasq restart
